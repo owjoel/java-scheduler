@@ -1,0 +1,12 @@
+spring:
+  application:
+    name:
+      java-scheduler
+  datasource:
+    url: jdbc:postgresql://localhost:5432/scheduler
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
