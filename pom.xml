@@ -11,14 +11,14 @@
 	</parent>
 
 	<groupId>com.joel</groupId>
-	<artifactId>java-scheduler</artifactId>
+	<artifactId>omnicron</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>pom</packaging>
 
 	<modules>
-		<module>java-scheduler-core</module>
-		<module>java-scheduler-api</module>
-		<module>java-scheduler-worker</module>
+		<module>omnicron-core</module>
+		<module>omnicron-api</module>
+		<module>omnicron-worker</module>
 	</modules>
 
 	<properties>
