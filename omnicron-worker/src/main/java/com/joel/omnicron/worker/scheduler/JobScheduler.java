@@ -50,6 +50,7 @@ public class JobScheduler {
                     JobType.CRON,
                     resolveOptionValues(jobDefinition),
                     jobDefinition.getTemplate(),
+                    jobDefinition.getMaxRetries(),
                     jobDefinition.getFanOutSpec(),
                     new JobState(JobStatus.QUEUED, null, null, null));
             jobRepository.save(job);

@@ -11,6 +11,9 @@ import jakarta.persistence.Id;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
 @Entity
 @Table(name = "tasks")
 public class Task {
@@ -34,7 +37,6 @@ public class Task {
     @Column(name = "attempt", nullable = false)
     private Integer attempt;
 
-
     @Column(name = "kubernetes_job_name")
     private String kubernetesJobName;
 
@@ -47,31 +49,52 @@ public class Task {
     @Column(name = "locked_until")
     private Instant lockedUntil;
 
+    @CreationTimestamp
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
+    @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
     protected Task() {
     }
 
-    public Task(Long jobId, Integer taskIndex, String taskKey, Integer attempt, String kubernetesJobName, TaskState state) {
+    public Task(Long jobId, Integer taskIndex, String taskKey, Integer attempt, String kubernetesJobName,
+            TaskState state) {
         this.jobId = jobId;
         this.taskIndex = taskIndex;
         this.taskKey = taskKey;
         this.attempt = attempt;
         this.state = state;
         this.kubernetesJobName = kubernetesJobName;
-        this.createdAt = Instant.now();
-        this.updatedAt = Instant.now();
     }
 
     /**
      * Creates the default queued Task for a non-fan-out Job.
      */
-    public static Task singleQueued(Long jobId, String kubernetesJobName) {
-        return new Task(jobId, 0, null, 1, kubernetesJobName, TaskState.queued());
+    public static Task singleQueued(Long jobId) {
+        return queuedAttempt(jobId, 0, null, 1);
+    }
+
+    /**
+     * Creates a queued Task attempt and assigns its deterministic Kubernetes Job
+     * name.
+     */
+    public static Task queuedAttempt(Long jobId, Integer taskIndex, String taskKey, Integer attempt) {
+        return new Task(
+                jobId,
+                taskIndex,
+                taskKey,
+                attempt,
+                buildKubernetesJobName(jobId, taskIndex, attempt),
+                TaskState.queued());
+    }
+
+    public static String buildKubernetesJobName(Long jobId, Integer taskIndex, Integer attempt) {
+        return "omnicron-job-" + jobId
+                + "-task-" + taskIndex
+                + "-attempt-" + attempt;
     }
 
     public Long getId() {
@@ -92,7 +115,7 @@ public class Task {
 
     public void setManifest(String manifest) {
         this.manifest = manifest;
-    } 
+    }
 
     public Integer getTaskIndex() {
         return taskIndex;
@@ -167,8 +190,7 @@ public class Task {
     }
 
     public boolean isTerminal() {
-        return state != null
-                && (state.getStatus() == TaskStatus.COMPLETED || state.getStatus() == TaskStatus.FAILED);
+        return state != null && isTerminalStatus(state.getStatus());
     }
 
     public boolean isLockedBy(String workerId) {
@@ -179,29 +201,39 @@ public class Task {
         return lockedUntil != null && lockedUntil.isAfter(Instant.now());
     }
 
-    public void updateState(
-            TaskStatus status,
-            String failureMessage,
-            Instant startedAt,
-            Instant endedAt) {
+    public void updateState(TaskStatus status, String failureMessage) {
         if (state == null) {
             state = new TaskState(null, null, null, null);
         }
 
+        Instant now = Instant.now();
+
         if (status != null) {
             state.setStatus(status);
+
+            if (isStartedStatus(status) && state.getStartedAt() == null) {
+                state.setStartedAt(now);
+            }
+
+            if (isTerminalStatus(status) && state.getEndedAt() == null) {
+                state.setEndedAt(now);
+            }
         }
 
         if (failureMessage != null) {
             state.setFailureMessage(failureMessage);
         }
+    }
 
-        if (startedAt != null) {
-            state.setStartedAt(startedAt);
-        }
+    private boolean isStartedStatus(TaskStatus status) {
+        return status == TaskStatus.ADMITTED
+                || status == TaskStatus.RUNNING
+                || isTerminalStatus(status);
+    }
 
-        if (endedAt != null) {
-            state.setEndedAt(endedAt);
-        }
+    private boolean isTerminalStatus(TaskStatus status) {
+        return status == TaskStatus.COMPLETED
+                || status == TaskStatus.FAILED
+                || status == TaskStatus.CANCELLED;
     }
 }

@@ -1,0 +1,23 @@
+metadata:
+  name: sleep-test
+  author: joel
+  description: Simple test job that sleeps briefly.
+template: |
+  spec:
+    containers:
+      - name: sleep
+        image: busybox:1.36
+        command:
+          - sh
+          - -c
+          - echo "{{message}}"; sleep 10; echo done
+options:
+  - name: message
+    type: STRING
+    required: true
+    defaultValue: hello from omnicron
+schedule:
+  cronExpression: "0 * * * * *"
+  scheduleEnabled: true
+maxRetries: 0
+fanOutSpec: null

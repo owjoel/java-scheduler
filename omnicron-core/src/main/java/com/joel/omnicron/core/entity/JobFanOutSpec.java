@@ -7,6 +7,8 @@ import org.hibernate.type.SqlTypes;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 
 @Embeddable
 public class JobFanOutSpec {
@@ -17,6 +19,10 @@ public class JobFanOutSpec {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "with_keys")
     private List<String> withKeys;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "completion_strategy")
+    private JobCompletionStrategy completionStrategy;
 
     public Integer getWithCount() {
         return withCount;
@@ -32,5 +38,13 @@ public class JobFanOutSpec {
 
     public void setWithKeys(List<String> withKeys) {
         this.withKeys = withKeys;
+    }
+
+    public JobCompletionStrategy getCompletionStrategy() {
+        return completionStrategy;
+    }
+
+    public void setCompletionStrategy(JobCompletionStrategy completionStrategy) {
+        this.completionStrategy = completionStrategy;
     }
 }

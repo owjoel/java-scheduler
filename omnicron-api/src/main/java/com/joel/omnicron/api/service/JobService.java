@@ -41,6 +41,7 @@ public class JobService {
 				new GetJobResponse.Metadata(metadata.getName(), metadata.getOperator()),
 				job.getJobType(),
 				job.getOptionValues(),
+				job.getMaxRetries(),
 				job.getFanOutSpec(),
 				new GetJobResponse.State(
 						state.getStatus(),

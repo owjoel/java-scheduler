@@ -9,7 +9,7 @@ CREATE TABLE tasks (
     attempt INTEGER NOT NULL,
     status VARCHAR(50),
     failure_message TEXT,
-    start TIMESTAMP WITH TIME ZONE,
+    started_at TIMESTAMP WITH TIME ZONE,
     ended_at TIMESTAMP WITH TIME ZONE,
     kubernetes_job_name VARCHAR(255),
     locked_by VARCHAR(255),
@@ -21,6 +21,5 @@ CREATE TABLE tasks (
         REFERENCES jobs(id)
 );
 
-CREATE INDEX idx_tasks_queue_claim
-ON tasks (status, locked_until, created_at)
-WHERE status = 'QUEUED';
+CREATE UNIQUE INDEX uq_tasks_job_task_index_attempt
+ON tasks (job_id, task_index, attempt);

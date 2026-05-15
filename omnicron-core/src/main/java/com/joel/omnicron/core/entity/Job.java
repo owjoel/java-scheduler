@@ -16,7 +16,9 @@ import jakarta.persistence.Id;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
 
 @Entity
@@ -44,19 +46,28 @@ public class Job {
     @Column(name = "template", nullable = false)
     private String template;
 
+    @Column(name = "max_retries", nullable = false)
+    private Integer maxRetries;
+
     @Embedded
     private JobFanOutSpec fanOutSpec;
-    
-
 
     @Embedded
     private JobState state;
 
+    @CreationTimestamp
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
+    @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    @Column(name = "locked_by")
+    private String lockedBy;
+
+    @Column(name = "locked_until")
+    private Instant lockedUntil;
 
     protected Job() {
     }
@@ -67,6 +78,7 @@ public class Job {
             JobType jobType,
             Map<String, Object> optionValues,
             String template,
+            Integer maxRetries,
             JobFanOutSpec fanOutSpec,
             JobState state) {
         this.jobDefinitionId = jobDefinitionId;
@@ -74,10 +86,9 @@ public class Job {
         this.jobType = jobType;
         this.optionValues = optionValues != null ? new HashMap<>(optionValues) : new HashMap<>();
         this.template = template;
+        this.maxRetries = maxRetries;
         this.fanOutSpec = fanOutSpec;
         this.state = state;
-        this.createdAt = Instant.now();
-        this.updatedAt = Instant.now();
     }
 
     public Long getId() {
@@ -124,6 +135,14 @@ public class Job {
         this.template = template;
     }
 
+    public Integer getMaxRetries() {
+        return maxRetries;
+    }
+
+    public void setMaxRetries(Integer maxRetries) {
+        this.maxRetries = maxRetries;
+    }
+
     public JobFanOutSpec getFanOutSpec() {
         return fanOutSpec;
     }
@@ -154,6 +173,22 @@ public class Job {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getLockedBy() {
+        return lockedBy;
+    }
+
+    public void setLockedBy(String lockedBy) {
+        this.lockedBy = lockedBy;
+    }
+
+    public Instant getLockedUntil() {
+        return lockedUntil;
+    }
+
+    public void setLockedUntil(Instant lockedUntil) {
+        this.lockedUntil = lockedUntil;
     }
 
     public void putOptionValue(String name, Object value) {
@@ -195,5 +230,13 @@ public class Job {
 
     public boolean isTerminal() {
         return state.getStatus().equals(JobStatus.COMPLETED) || state.getStatus().equals(JobStatus.FAILED);
+    }
+
+    public boolean isLockedBy(String workerId) {
+        return workerId != null && workerId.equals(lockedBy);
+    }
+
+    public boolean hasActiveLock() {
+        return lockedUntil != null && lockedUntil.isAfter(Instant.now());
     }
 }

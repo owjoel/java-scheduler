@@ -19,16 +19,12 @@ worker:
   scheduler:
     interval: 5000
     batch-size: 10
-  task-creator:
-    interval: 5000
-    batch-size: 10
   processor:
     thread-count: 3
-    reconciler:
-      lock-duration: 30s
   poller:
     interval: 5000
     batch-size: 20
     lock-duration: 30s
   kubernetes:
     namespace: default
+    ttlSecondsAfterFinished: 3600

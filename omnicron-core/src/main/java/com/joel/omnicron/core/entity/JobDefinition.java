@@ -11,7 +11,9 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.List;
 
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
 
 @Entity
@@ -45,9 +47,11 @@ public class JobDefinition {
     @Embedded
     private JobDefinitionSchedule schedule;
 
+    @CreationTimestamp
     @Column(name = "created_at")
     private Instant createdAt;
 
+    @UpdateTimestamp
     @Column(name = "updated_at")
     private Instant updatedAt;
 
@@ -67,8 +71,6 @@ public class JobDefinition {
         this.maxRetries = maxRetries;
         this.fanOutSpec = fanOutSpec;
         this.schedule = schedule;
-        this.createdAt = Instant.now();
-        this.updatedAt = Instant.now();
     }
 
     public Long getId() {

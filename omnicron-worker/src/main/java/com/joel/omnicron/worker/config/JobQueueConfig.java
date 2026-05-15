@@ -7,9 +7,9 @@ import io.kubernetes.client.extended.workqueue.DefaultRateLimitingQueue;
 import io.kubernetes.client.extended.workqueue.RateLimitingQueue;
 
 @Configuration
-public class TaskQueueConfig {
+public class JobQueueConfig {
     @Bean
-    public RateLimitingQueue<Long> taskQueue() {
+    public RateLimitingQueue<Long> jobQueue() {
         return new DefaultRateLimitingQueue<>();
     }
 }

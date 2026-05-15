@@ -9,6 +9,7 @@ import io.kubernetes.client.extended.workqueue.RateLimitingQueue;
 import io.kubernetes.client.informer.ResourceEventHandler;
 import io.kubernetes.client.informer.SharedIndexInformer;
 import io.kubernetes.client.informer.SharedInformerFactory;
+import io.kubernetes.client.informer.cache.Lister;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.apis.BatchV1Api;
 import io.kubernetes.client.openapi.models.V1Job;
@@ -22,10 +23,16 @@ public class KubernetesJobInformer {
     private final BatchV1Api batchV1Api;
     private final RateLimitingQueue<Long> queue;
 
+    private SharedIndexInformer<V1Job> informer;
+    private Lister<V1Job> jobLister;
+
     @Value("${worker.kubernetes.namespace:default}")
     private String namespace;
 
-    public KubernetesJobInformer(ApiClient apiClient, BatchV1Api batchV1Api, RateLimitingQueue<Long> queue) {
+    public KubernetesJobInformer(
+            ApiClient apiClient,
+            BatchV1Api batchV1Api,
+            RateLimitingQueue<Long> queue) {
         apiClient.setReadTimeout(0);
         this.informerFactory = new SharedInformerFactory(apiClient, true);
         this.batchV1Api = batchV1Api;
@@ -34,7 +41,7 @@ public class KubernetesJobInformer {
 
     @PostConstruct
     public void start() {
-        SharedIndexInformer<V1Job> informer =
+        informer =
             informerFactory.sharedIndexInformerFor(
                 params -> batchV1Api
                     .listNamespacedJob(namespace)
@@ -50,24 +57,30 @@ public class KubernetesJobInformer {
         informer.addEventHandler(new ResourceEventHandler<>() {
             @Override
             public void onAdd(V1Job job) {
-                enqueueTask(job);
+                enqueue(job);
             }
 
             @Override
             public void onUpdate(V1Job oldJob, V1Job newJob) {
-                enqueueTask(newJob);
+                enqueue(newJob);
             }
 
             @Override
             public void onDelete(V1Job job, boolean deletedFinalStateUnknown) {
-                enqueueTask(job);
+                enqueue(job);
             }
         });
+
+        jobLister = new Lister<>(informer.getIndexer()).namespace(namespace);
 
         informerFactory.startAllRegisteredInformers();
     }
 
-    private void enqueueTask(V1Job job) {
+    public boolean hasSynced() {
+        return informer != null && informer.hasSynced();
+    }
+
+    private void enqueue(V1Job job) {
         if (job.getMetadata() == null) {
             return;
         }
@@ -77,18 +90,24 @@ public class KubernetesJobInformer {
             return;
         }
 
-        String taskId = labels.get("omnicron/task-id");
-        if (taskId == null) {
+        String jobId = labels.get("omnicron/job-id");
+        if (jobId == null) {
             return;
         }
 
         try {
-            queue.add(Long.valueOf(taskId));
+            queue.add(Long.valueOf(jobId));
         } catch (NumberFormatException e) {
-            
+
+        }
+    }
+
+    public V1Job getJob(String name) {
+        if (jobLister == null || name == null) {
+            return null;
         }
 
-        
+        return jobLister.get(name);
     }
 
     @PreDestroy

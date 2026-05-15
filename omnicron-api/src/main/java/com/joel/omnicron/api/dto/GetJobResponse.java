@@ -12,6 +12,7 @@ public record GetJobResponse(
         Metadata metadata,
         JobType jobType,
         Map<String, Object> optionValues,
+        Integer maxRetries,
         JobFanOutSpec fanOutSpec,
         State state,
         Instant createdAt,
